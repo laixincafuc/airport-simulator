@@ -3,8 +3,8 @@ name: Build and Export Docker Image
 on:
   push:
     tags:
-      - 'v*'  # 当推送 v 开头的标签时触发
-  workflow_dispatch:  # 允许手动触发
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -12,13 +12,13 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4  # 也更新到 v4
       
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+      uses: docker/setup-buildx-action@v3  # 更新到最新版本
       
     - name: Build Docker image
-      uses: docker/build-push-action@v4
+      uses: docker/build-push-action@v5  # 更新到最新版本
       with:
         context: .
         file: ./Dockerfile
@@ -26,8 +26,6 @@ jobs:
           airport-simulator:latest
           airport-simulator:${{ github.sha }}
         outputs: type=docker,dest=/tmp/airport-simulator.tar
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
         
     - name: Test Docker image
       run: |
@@ -39,7 +37,7 @@ jobs:
         docker rm test-container
         
     - name: Upload Docker image artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4  # 关键修改：v3 → v4
       with:
         name: airport-simulator-docker-image
         path: /tmp/airport-simulator.tar
