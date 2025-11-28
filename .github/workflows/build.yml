@@ -1,0 +1,52 @@
+name: Build and Export Docker Image
+
+on:
+  push:
+    tags:
+      - 'v*'  # 当推送 v 开头的标签时触发
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      
+    - name: Build Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./Dockerfile
+        tags: |
+          airport-simulator:latest
+          airport-simulator:${{ github.sha }}
+        outputs: type=docker,dest=/tmp/airport-simulator.tar
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: Test Docker image
+      run: |
+        docker load -i /tmp/airport-simulator.tar
+        docker run -d --name test-container -p 5000:5000 airport-simulator:latest
+        sleep 15
+        curl -f http://localhost:5000/health || exit 1
+        docker stop test-container
+        docker rm test-container
+        
+    - name: Upload Docker image artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: airport-simulator-docker-image
+        path: /tmp/airport-simulator.tar
+        retention-days: 30
+        
+    - name: Create release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: /tmp/airport-simulator.tar
